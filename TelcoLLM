@@ -17,7 +17,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.schema import Document
 
 # OpenAI API 키 설정
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "s"
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 # 3. 데이터 로드 (전체 데이터 사용)
