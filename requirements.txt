@@ -3,3 +3,4 @@ openai==0.27.0
 langchain==0.0.132
 transformers==4.21.1
 sentence-transformers==2.2.2
+tokenizers==0.13.3   # 문제 해결을 위해 추가한 버전
