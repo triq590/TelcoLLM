@@ -1,8 +1,8 @@
 # app.py
 
-# 1. 필요한 라이브러리 설치
+# 1. 필요한 라이브러리 설치 (필요한 경우)
 !pip install -U pyarrow==15.0.0
-!pip install -U sentence-transformers langchain langchain_community langchain_chroma datasets openai transformers streamlit
+!pip install -U sentence-transformers langchain langchain_community langchain_chroma datasets openai transformers streamlit tokenizers==0.13.3
 
 # 2. 라이브러리 import 및 환경 설정
 import os
@@ -22,7 +22,7 @@ from langchain.schema import Document
 # OpenAI API 키 설정 (Streamlit secrets 사용)
 os.environ["OPENAI_API_KEY"] = st.secrets["openai"]["api_key"]
 
-# 3. 데이터 로드 (샘플링된 데이터 사용)
+# 3. 데이터 로드 (샘플링된 데이터 사용으로 테스트 시간 단축)
 df_csv = load_dataset("bitext/Bitext-telco-llm-chatbot-training-dataset", split="train").to_pandas()[['instruction', 'response']].rename(columns={"response": "output"}).sample(50, random_state=42)
 df_parquet = load_dataset("akshayjambhulkar/customer-support-telecom-alpaca", split="train").to_pandas()[['instruction', 'output']].sample(50, random_state=42)
 df = pd.concat([df_csv, df_parquet], ignore_index=True)
