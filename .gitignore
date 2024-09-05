@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+fine_tuned_model/
+results/
+logs/
