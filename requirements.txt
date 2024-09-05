@@ -1,6 +1,9 @@
-streamlit==1.12.0
-openai==0.27.0
-langchain==0.0.132
-transformers>=4.30.0  # 최신 버전 사용
+streamlit==1.22.0
+pandas==1.5.3
+datasets==2.12.0
 sentence-transformers==2.2.2
-tokenizers>=0.13.0  # 최신 버전 사용
+langchain==0.0.184
+chromadb==0.3.23
+openai==0.27.7
+transformers==4.29.2
+torch==2.0.1
