@@ -1,9 +1,12 @@
+# app.py
+
 import streamlit as st
 import pandas as pd
 from datasets import load_dataset
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
+# Streamlit 페이지 설정
 st.set_page_config(page_title="텔코 고객센터 챗봇", page_icon="🤖")
 
 @st.cache_resource
