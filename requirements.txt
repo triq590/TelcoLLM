@@ -1,6 +1,6 @@
 streamlit==1.12.0
 openai==0.27.0
 langchain==0.0.132
-transformers==4.21.1
+transformers>=4.30.0  # 최신 버전 사용
 sentence-transformers==2.2.2
-tokenizers==0.13.3   # 문제 해결을 위해 추가한 버전
+tokenizers>=0.13.0  # 최신 버전 사용
