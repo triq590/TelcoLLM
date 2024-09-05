@@ -9,11 +9,12 @@ st.set_page_config(page_title="텔코 고객센터 챗봇", page_icon="🤖")
 # 1. Caching the data load to improve performance
 @st.cache_resource
 def load_data():
+    # Load sampled dataset for testing
     df_csv = load_dataset("bitext/Bitext-telco-llm-chatbot-training-dataset", split="train").to_pandas()[['instruction', 'response']].rename(columns={"response": "output"}).sample(50, random_state=42)
     df_parquet = load_dataset("akshayjambhulkar/customer-support-telecom-alpaca", split="train").to_pandas()[['instruction', 'output']].sample(50, random_state=42)
     return pd.concat([df_csv, df_parquet], ignore_index=True)
 
-# 2. Loading the model and caching it
+# 2. Caching the model load to improve performance
 @st.cache_resource
 def load_model():
     return SentenceTransformer('all-MiniLM-L6-v2')
