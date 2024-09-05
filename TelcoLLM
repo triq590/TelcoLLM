@@ -1,3 +1,5 @@
+# app.py
+
 # 1. 필요한 라이브러리 설치
 !pip install -U pyarrow==15.0.0
 !pip install -U sentence-transformers langchain langchain_community langchain_chroma datasets openai transformers streamlit
@@ -10,45 +12,64 @@ from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments
+import torch
 import streamlit as st
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain.schema import Document
 
-# OpenAI API 키 설정
-OPENAI_API_KEY = "s"
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+# OpenAI API 키 설정 (Streamlit secrets 사용)
+os.environ["OPENAI_API_KEY"] = st.secrets["openai"]["api_key"]
 
-# 3. 데이터 로드 (전체 데이터 사용)
-df_csv = load_dataset("bitext/Bitext-telco-llm-chatbot-training-dataset", split="train").to_pandas()[['instruction', 'response']].rename(columns={"response": "output"})
-df_parquet = load_dataset("akshayjambhulkar/customer-support-telecom-alpaca", split="train").to_pandas()[['instruction', 'output']]
+# 3. 데이터 로드 (샘플링된 데이터 사용)
+df_csv = load_dataset("bitext/Bitext-telco-llm-chatbot-training-dataset", split="train").to_pandas()[['instruction', 'response']].rename(columns={"response": "output"}).sample(50, random_state=42)
+df_parquet = load_dataset("akshayjambhulkar/customer-support-telecom-alpaca", split="train").to_pandas()[['instruction', 'output']].sample(50, random_state=42)
 df = pd.concat([df_csv, df_parquet], ignore_index=True)
 
 # 4. Fine-tuning 준비
 tokenizer = AutoTokenizer.from_pretrained('gpt2')
 model = AutoModelForCausalLM.from_pretrained('gpt2')
 
+# 패딩 토큰 설정 (필수)
+tokenizer.pad_token = tokenizer.eos_token
+
 # Fine-tuning에 사용할 데이터셋 준비
 def tokenize_function(examples):
-    return tokenizer(examples['instruction'], padding="max_length", truncation=True, max_length=128)
+    # 입력(input)과 출력(label)을 각각 토큰화
+    inputs = tokenizer(examples['input'], padding="max_length", truncation=True, max_length=128)
+    labels = tokenizer(examples['label'], padding="max_length", truncation=True, max_length=128)
 
+    # labels의 패딩 토큰을 -100으로 처리하여 학습 시 무시되도록 설정
+    labels["input_ids"] = [[-100 if token == tokenizer.pad_token_id else token for token in label] for label in labels["input_ids"]]
+    
+    inputs["labels"] = labels["input_ids"]
+    return inputs
+
+# train_data에서 instruction과 output을 input과 label로 변환
 train_data = df[['instruction', 'output']].rename(columns={"instruction": "input", "output": "label"}).to_dict('records')
 
 # Hugging Face Dataset 변환
 from datasets import Dataset
 train_dataset = Dataset.from_pandas(pd.DataFrame(train_data))
 
-# 토큰화
+# 토큰화 (열 이름을 'input'과 'label'로 변경)
 tokenized_datasets = train_dataset.map(tokenize_function, batched=True)
 
-# TrainingArguments 설정
+# 텐서로 변환할 때 리스트의 길이를 모두 맞춰야 함
+# 이를 위해 입력 데이터와 출력 데이터의 길이가 같은지 확인하고 일관되게 처리
+def collate_fn(batch):
+    input_ids = torch.tensor([example['input_ids'] for example in batch], dtype=torch.long)
+    labels = torch.tensor([example['labels'] for example in batch], dtype=torch.long)
+    return {'input_ids': input_ids, 'labels': labels}
+
+# TrainingArguments 설정 (평가 생략)
 training_args = TrainingArguments(
     output_dir="./results",
     per_device_train_batch_size=4,
     per_device_eval_batch_size=4,
     num_train_epochs=1,
-    evaluation_strategy="epoch",
+    evaluation_strategy="no",  # 평가를 생략하여 오류 해결
     logging_dir="./logs",
     save_total_limit=2,
 )
@@ -58,7 +79,8 @@ trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=tokenized_datasets,
-    tokenizer=tokenizer
+    tokenizer=tokenizer,
+    data_collator=collate_fn  # 리스트 길이를 맞춰서 학습할 수 있게 해줍니다.
 )
 
 # Fine-tuning 수행
