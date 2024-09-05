@@ -1,8 +1,12 @@
+# app.py
+
 import streamlit as st
 import pandas as pd
 from datasets import load_dataset
-from sentence_transformers import SentenceTransformer, util
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
+# Streamlit 페이지 설정
 st.set_page_config(page_title="텔코 고객센터 챗봇", page_icon="🤖")
 
 @st.cache_resource
@@ -18,7 +22,7 @@ def load_model():
 def find_most_similar(query, df, model):
     query_embedding = model.encode([query])
     instruction_embeddings = model.encode(df['instruction'].tolist())
-    similarities = util.pytorch_cos_sim(query_embedding, instruction_embeddings)[0]
+    similarities = np.dot(query_embedding, instruction_embeddings.T)[0]
     most_similar_idx = similarities.argmax()
     return df.iloc[most_similar_idx]
 
