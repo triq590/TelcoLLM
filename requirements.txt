@@ -1,8 +1,9 @@
+pip==24.2.0  # This will upgrade pip to the latest version
+setuptools>=42  # Ensures distutils is available
 streamlit==1.22.0
 pandas==1.5.3
 datasets==2.12.0
 sentence-transformers==2.2.2
 numpy==1.23.5
-tokenizers==0.11.6  # Downgrade to avoid Rust
+tokenizers==0.11.6  # Downgrade to avoid Rust compilation
 transformers==4.21.1  # Compatible with the older tokenizers
-setuptools>=42  # Includes distutils, needed for building
