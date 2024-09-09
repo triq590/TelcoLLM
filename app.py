@@ -1,62 +1,33 @@
 import streamlit as st
 import pandas as pd
-from datasets import load_dataset
-from sentence_transformers import SentenceTransformer
-import numpy as np
-from typing import Tuple
+from huggingface_hub import hf_hub_download
 
-st.set_page_config(page_title="텔코 고객센터 챗봇", page_icon="🤖")
+# 데이터 다운로드 및 로드
+@st.cache_data
+def load_data():
+    file_path = hf_hub_download(repo_id="bitext/Bitext-telco-llm-chatbot-training-dataset", filename="bitext-telco-llm-chatbot-training-dataset.csv")
+    df = pd.read_csv(file_path)
+    return df.sample(n=100, random_state=42)  # 100개 샘플 추출
 
-@st.cache_resource
-def load_data() -> pd.DataFrame:
-    try:
-        df_csv = load_dataset("bitext/Bitext-telco-llm-chatbot-training-dataset", split="train").to_pandas()[['instruction', 'response']].rename(columns={"response": "output"}).sample(50, random_state=42)
-        df_parquet = load_dataset("akshayjambhulkar/customer-support-telecom-alpaca", split="train").to_pandas()[['instruction', 'output']].sample(50, random_state=42)
-        return pd.concat([df_csv, df_parquet], ignore_index=True)
-    except Exception as e:
-        st.error(f"데이터 로딩 중 오류 발생: {str(e)}")
-        return pd.DataFrame(columns=['instruction', 'output'])
+# 데이터 로드
+df = load_data()
 
-@st.cache_resource
-def load_model() -> SentenceTransformer:
-    try:
-        return SentenceTransformer('all-MiniLM-L6-v2')
-    except Exception as e:
-        st.error(f"모델 로딩 중 오류 발생: {str(e)}")
-        return None
+# Streamlit 앱
+st.title("텔코 고객센터 챗봇 데모")
 
-def find_most_similar(query: str, df: pd.DataFrame, model: SentenceTransformer) -> Tuple[str, float]:
-    try:
-        query_embedding = model.encode([query])
-        instruction_embeddings = model.encode(df['instruction'].tolist())
-        similarities = np.dot(query_embedding, instruction_embeddings.T)[0]
-        most_similar_idx = similarities.argmax()
-        return df.iloc[most_similar_idx]['output'], similarities[most_similar_idx]
-    except Exception as e:
-        st.error(f"유사도 계산 중 오류 발생: {str(e)}")
-        return "죄송합니다. 답변을 생성하는 데 문제가 발생했습니다.", 0.0
+# 사용자 입력
+user_input = st.text_input("질문을 입력하세요:")
 
-def main():
-    st.title("텔코 고객센터 챗봇 🤖")
-    st.write("고객센터 관련 질문을 입력하세요:")
-
-    df = load_data()
-    model = load_model()
-
-    if df.empty or model is None:
-        st.error("챗봇을 초기화하는 데 문제가 발생했습니다. 나중에 다시 시도해 주세요.")
-        return
-
-    question = st.text_input("질문을 입력하세요:")
+if user_input:
+    # 간단한 키워드 매칭 (실제 프로덕션에서는 더 복잡한 로직이 필요합니다)
+    matching_rows = df[df['question'].str.contains(user_input, case=False, na=False)]
     
-    if question:
-        with st.spinner('답변을 생성 중입니다...'):
-            answer, similarity = find_most_similar(question, df, model)
-            st.write(f"챗봇 답변: {answer}")
-            st.write(f"유사도: {similarity:.2f}")
+    if not matching_rows.empty:
+        st.write("답변:")
+        st.write(matching_rows.iloc[0]['answer'])
+    else:
+        st.write("죄송합니다. 해당 질문에 대한 답변을 찾을 수 없습니다.")
 
-    st.sidebar.markdown("### 챗봇 정보")
-    st.sidebar.info("이 챗봇은 텔코 고객센터 문의에 대한 답변을 제공합니다. 실제 상담원과 대화하는 것이 아니며, 일반적인 정보만 제공합니다.")
-
-if __name__ == "__main__":
-    main()
+# 데이터 프레임 표시 (디버깅 목적)
+st.subheader("샘플 데이터")
+st.dataframe(df)
