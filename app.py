@@ -1,10 +1,12 @@
 import streamlit as st
 import pandas as pd
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from googletrans import Translator
+import requests
+from bs4 import BeautifulSoup
 
 # 데이터 로드 및 전처리
 @st.cache_resource
@@ -16,7 +18,7 @@ def load_data():
 # 모델 및 토크나이저 로드
 @st.cache_resource
 def load_model_and_tokenizer():
-    model_name = "skt/kogpt2-base-v2"  # 한국어 GPT-2 모델
+    model_name = "EleutherAI/polyglot-ko-5.8b"  # 한국어 지원 대형 언어 모델
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name)
     return tokenizer, model
@@ -36,39 +38,51 @@ def retrieve_relevant_context(query, df, sentence_transformer):
     df['similarity'] = df['embedding'].apply(lambda x: cosine_similarity(query_embedding, x.reshape(1, -1))[0][0])
     return df.nlargest(3, 'similarity')
 
-# Fine-tuning 함수 (실제 환경에서는 별도로 실행하고 결과만 로드해야 함)
-def fine_tune_model(model, tokenizer, df):
-    # 이 부분은 실제 fine-tuning 로직을 구현해야 합니다.
-    # 여기서는 간단한 예시만 제공합니다.
-    st.write("실제 시나리오에서는 여기서 Fine-tuning이 수행됩니다.")
-    return model, tokenizer
+# 웹 검색 함수
+def web_search(query):
+    url = "https://www.tworld.co.kr/web/home"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # 메뉴 항목 찾기 (실제 웹사이트 구조에 따라 수정 필요)
+    menu_items = soup.find_all('a', class_='menu-item')
+    
+    relevant_items = []
+    for item in menu_items:
+        if query.lower() in item.text.lower():
+            relevant_items.append(item.text)
+    
+    return relevant_items
 
 # 메인 함수
 def main():
-    st.title("텔코 고객센터 챗봇 데모")
+    st.title("Telco Chatbot")
 
     df = load_data()
     tokenizer, model = load_model_and_tokenizer()
     sentence_transformer = load_sentence_transformer()
 
-    # Fine-tuning (실제로는 이 부분을 별도로 실행하고 결과를 저장해야 함)
-    model, tokenizer = fine_tune_model(model, tokenizer, df)
-
     user_input = st.text_input("질문을 입력하세요:")
 
     if user_input:
-        # 한국어 질문을 영어로 번역
-        translated_input = translator.translate(user_input, src='ko', dest='en').text
-
         # RAG
-        relevant_context = retrieve_relevant_context(translated_input, df, sentence_transformer)
-        context = " ".join(relevant_context['instruction'] + " " + relevant_context['response'])
-
-        # 컨텍스트를 한국어로 번역
-        translated_context = translator.translate(context, src='en', dest='ko').text
+        relevant_context = retrieve_relevant_context(user_input, df, sentence_transformer)
+        
+        if not relevant_context.empty:
+            context = " ".join(relevant_context['instruction'] + " " + relevant_context['response'])
+            input_text = context + " " + user_input
+            source = "Fine-tuning Data"
+        else:
+            # 웹 검색
+            web_results = web_search(user_input)
+            if web_results:
+                input_text = " ".join(web_results) + " " + user_input
+                source = "tworld 페이지"
+            else:
+                input_text = user_input
+                source = "웹서치"
 
         # 생성
-        input_text = translated_context + " " + user_input
         input_ids = tokenizer.encode(input_text, return_tensors="pt")
         attention_mask = torch.ones(input_ids.shape, dtype=torch.long)
         
@@ -86,10 +100,7 @@ def main():
         
         st.write("챗봇 응답:")
         st.write(response)
-
-    # 데이터 프레임 표시 (디버깅 목적)
-    st.subheader("샘플 데이터")
-    st.dataframe(df.head())
+        st.write(f"위 답변은 {source}를 참고했습니다.")
 
 if __name__ == "__main__":
     main()
