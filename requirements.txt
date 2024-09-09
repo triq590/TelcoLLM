@@ -3,7 +3,7 @@ pandas==1.5.3
 datasets==2.12.0
 sentence-transformers==2.2.2
 numpy==1.23.5
-tokenizers==0.10.3  # Downgrade to avoid Rust
-transformers==4.21.1  # Compatible with the older tokenizers
-setuptools>=42  # Ensures distutils is available
-pip==24.2.0  # Ensure pip is up to date for dependency resolution
+tokenizers==0.10.3
+transformers==4.21.1
+setuptools>=42
+pip==24.2.0
