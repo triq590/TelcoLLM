@@ -1,2 +1,7 @@
 streamlit
 pandas
+torch
+transformers
+sentence-transformers
+scikit-learn
+googletrans==3.1.0a0
