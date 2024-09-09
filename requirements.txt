@@ -2,6 +2,7 @@ streamlit==1.22.0
 pandas==1.5.3
 datasets==2.12.0
 sentence-transformers==2.2.2
-numpy==1.23.5  # Compatible version of numpy
-tokenizers==0.12.1  # Compatible with transformers versions
-transformers==4.21.1  # Ensure compatibility with tokenizers
+numpy==1.23.5
+tokenizers==0.12.1
+transformers==4.21.1
+setuptools>=42
