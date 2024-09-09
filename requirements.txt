@@ -3,6 +3,6 @@ pandas==1.5.3
 datasets==2.12.0
 sentence-transformers==2.2.2
 numpy==1.23.5
-tokenizers==0.11.6  # This version does not need Rust
-transformers==4.21.1
+tokenizers==0.11.6  # Downgraded version of tokenizers to avoid Rust
+transformers==4.21.1  # Ensure compatibility with tokenizers
 setuptools>=42
