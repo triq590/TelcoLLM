@@ -32,7 +32,7 @@ translator = Translator()
 # RAG 함수
 def retrieve_relevant_context(query, df, sentence_transformer):
     query_embedding = sentence_transformer.encode([query])
-    df['embedding'] = df['question'].apply(lambda x: sentence_transformer.encode(x))
+    df['embedding'] = df['instruction'].apply(lambda x: sentence_transformer.encode(x))
     df['similarity'] = df['embedding'].apply(lambda x: cosine_similarity(query_embedding, x.reshape(1, -1))[0][0])
     return df.nlargest(3, 'similarity')
 
@@ -62,7 +62,7 @@ def main():
 
         # RAG
         relevant_context = retrieve_relevant_context(translated_input, df, sentence_transformer)
-        context = " ".join(relevant_context['question'] + " " + relevant_context['answer'])
+        context = " ".join(relevant_context['instruction'] + " " + relevant_context['response'])
 
         # 컨텍스트를 한국어로 번역
         translated_context = translator.translate(context, src='en', dest='ko').text
