@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
-from huggingface_hub import hf_hub_download
 
 # 데이터 다운로드 및 로드
 @st.cache_data
 def load_data():
-    file_path = hf_hub_download(repo_id="bitext/Bitext-telco-llm-chatbot-training-dataset", filename="bitext-telco-llm-chatbot-training-dataset.csv")
-    df = pd.read_csv(file_path)
+    url = 'https://huggingface.co/datasets/bitext/Bitext-telco-llm-chatbot-training-dataset/resolve/main/bitext-telco-llm-chatbot-training-dataset.csv'
+    df = pd.read_csv(url)
     return df.sample(n=100, random_state=42)  # 100개 샘플 추출
 
 # 데이터 로드
