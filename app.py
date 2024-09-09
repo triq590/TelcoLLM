@@ -1,10 +1,7 @@
 import streamlit as st
 import pandas as pd
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-from googletrans import Translator
 import requests
 from bs4 import BeautifulSoup
 
@@ -15,21 +12,10 @@ def load_data():
     df = pd.read_csv(url)
     return df
 
-# 모델 및 토크나이저 로드
-@st.cache_resource
-def load_model_and_tokenizer():
-    model_name = "EleutherAI/polyglot-ko-5.8b"  # 한국어 지원 대형 언어 모델
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
-    return tokenizer, model
-
 # Sentence Transformer 모델 로드
 @st.cache_resource
 def load_sentence_transformer():
     return SentenceTransformer('sentence-transformers/distiluse-base-multilingual-cased-v2')
-
-# 번역기 초기화
-translator = Translator()
 
 # RAG 함수
 def retrieve_relevant_context(query, df, sentence_transformer):
@@ -54,12 +40,21 @@ def web_search(query):
     
     return relevant_items
 
+# 간단한 응답 생성 함수
+def generate_response(context, query):
+    # 여기에 간단한 규칙 기반 응답 로직을 구현합니다
+    if "요금제" in query:
+        return "요금제 변경은 고객센터(114)로 문의하시거나 T world 앱에서 직접 변경하실 수 있습니다."
+    elif "문의" in query:
+        return "더 자세한 정보는 고객센터(114)로 문의해 주시기 바랍니다."
+    else:
+        return f"죄송합니다. '{query}'에 대한 정확한 정보를 제공하기 어렵습니다. 고객센터(114)로 문의해 주시면 자세히 안내해 드리겠습니다."
+
 # 메인 함수
 def main():
     st.title("Telco Chatbot")
 
     df = load_data()
-    tokenizer, model = load_model_and_tokenizer()
     sentence_transformer = load_sentence_transformer()
 
     user_input = st.text_input("질문을 입력하세요:")
@@ -70,33 +65,19 @@ def main():
         
         if not relevant_context.empty:
             context = " ".join(relevant_context['instruction'] + " " + relevant_context['response'])
-            input_text = context + " " + user_input
             source = "Fine-tuning Data"
         else:
             # 웹 검색
             web_results = web_search(user_input)
             if web_results:
-                input_text = " ".join(web_results) + " " + user_input
+                context = " ".join(web_results)
                 source = "tworld 페이지"
             else:
-                input_text = user_input
+                context = user_input
                 source = "웹서치"
 
-        # 생성
-        input_ids = tokenizer.encode(input_text, return_tensors="pt")
-        attention_mask = torch.ones(input_ids.shape, dtype=torch.long)
-        
-        with torch.no_grad():
-            output = model.generate(input_ids, 
-                                    attention_mask=attention_mask, 
-                                    max_length=150, 
-                                    num_return_sequences=1, 
-                                    no_repeat_ngram_size=2, 
-                                    top_k=50, 
-                                    top_p=0.95, 
-                                    temperature=0.7)
-
-        response = tokenizer.decode(output[0], skip_special_tokens=True)
+        # 응답 생성
+        response = generate_response(context, user_input)
         
         st.write("챗봇 응답:")
         st.write(response)
